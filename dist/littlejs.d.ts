@@ -256,11 +256,6 @@ declare module "littlejsengine" {
      *  @default Vector2(16,16)
      *  @memberof Settings */
     export let tileSizeDefault: Vector2;
-    /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let tileFixBleedScale: number;
     /** Enable physics solver for collisions between objects
      *  @type {Boolean}
      *  @default
@@ -442,10 +437,6 @@ declare module "littlejsengine" {
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setTileSizeDefault(size: Vector2): void;
-    /** Set to prevent tile bleeding from neighbors in pixels
-     *  @param {Number} scale
-     *  @memberof Settings */
-    export function setTileFixBleedScale(scale: number): void;
     /** Set if collisions between objects are enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
@@ -1155,8 +1146,6 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {WebGLTexture} - webgl texture */
         glTexture: WebGLTexture;
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        fixBleedSize: Vector2;
     }
     /**
      * LittleJS Drawing System

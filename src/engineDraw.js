@@ -156,8 +156,6 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
     }
 }
 
@@ -230,11 +228,9 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             const y = tileInfo.pos.y / textureInfo.size.y;
             const w = tileInfo.size.x / textureInfo.size.x;
             const h = tileInfo.size.y / textureInfo.size.y;
-            const tileImageFixBleed = textureInfo.fixBleedSize;
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                x, y, x + w, y + h, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
         else
@@ -252,10 +248,10 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             if (textureInfo)
             {
                 // calculate uvs and render
-                const x = tileInfo.pos.x + tileFixBleedScale;
-                const y = tileInfo.pos.y + tileFixBleedScale;
-                const w = tileInfo.size.x - 2*tileFixBleedScale;
-                const h = tileInfo.size.y - 2*tileFixBleedScale;
+                const x = tileInfo.pos.x;
+                const y = tileInfo.pos.y;
+                const w = tileInfo.size.x;
+                const h = tileInfo.size.y;
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
                 context.globalAlpha = 1; // set back to full alpha

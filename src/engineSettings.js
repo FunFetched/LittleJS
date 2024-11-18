@@ -85,12 +85,6 @@ let glOverlay = true;
  *  @memberof Settings */
 let tileSizeDefault = vec2(16);
 
-/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
- *  @type {Number}
- *  @default
- *  @memberof Settings */
-let tileFixBleedScale = .5;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
 
@@ -325,11 +319,6 @@ function setGlOverlay(overlay) { glOverlay = overlay; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setTileSizeDefault(size) { tileSizeDefault = size; }
-
-/** Set to prevent tile bleeding from neighbors in pixels
- *  @param {Number} scale
- *  @memberof Settings */
-function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
 
 /** Set if collisions between objects are enabled
  *  @param {Boolean} enable

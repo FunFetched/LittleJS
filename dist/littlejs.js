@@ -1431,12 +1431,6 @@ let glOverlay = true;
  *  @memberof Settings */
 let tileSizeDefault = vec2(16);
 
-/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
- *  @type {Number}
- *  @default
- *  @memberof Settings */
-let tileFixBleedScale = .5;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
 
@@ -1671,11 +1665,6 @@ function setGlOverlay(overlay) { glOverlay = overlay; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setTileSizeDefault(size) { tileSizeDefault = size; }
-
-/** Set to prevent tile bleeding from neighbors in pixels
- *  @param {Number} scale
- *  @memberof Settings */
-function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
 
 /** Set if collisions between objects are enabled
  *  @param {Boolean} enable
@@ -2435,8 +2424,6 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
     }
 }
 
@@ -2509,11 +2496,9 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             const y = tileInfo.pos.y / textureInfo.size.y;
             const w = tileInfo.size.x / textureInfo.size.x;
             const h = tileInfo.size.y / textureInfo.size.y;
-            const tileImageFixBleed = textureInfo.fixBleedSize;
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                x, y, x + w, y + h, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
         else
@@ -2531,10 +2516,10 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             if (textureInfo)
             {
                 // calculate uvs and render
-                const x = tileInfo.pos.x + tileFixBleedScale;
-                const y = tileInfo.pos.y + tileFixBleedScale;
-                const w = tileInfo.size.x - 2*tileFixBleedScale;
-                const h = tileInfo.size.y - 2*tileFixBleedScale;
+                const x = tileInfo.pos.x;
+                const y = tileInfo.pos.y;
+                const w = tileInfo.size.x;
+                const h = tileInfo.size.y;
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
                 context.globalAlpha = 1; // set back to full alpha
@@ -2562,6 +2547,74 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
+
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    context.fillStyle = color.toString();
+    context.beginPath();
+    for (const point of screenSpace ? points : points.map(worldToScreen))
+        context.lineTo(point.x, point.y);
+    context.closePath();
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
+        context.stroke();
+    }
+}
+
+/** Draw colored ellipse using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [width=1]
+ *  @param {Number}  [height=1]
+ *  @param {Number}  [angle=0]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    if (!screenSpace)
+    {
+        pos = worldToScreen(pos);
+        width *= cameraScale;
+        height *= cameraScale;
+        lineWidth *= cameraScale;
+    }
+    context.fillStyle = color.toString();
+    context.beginPath();
+    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.stroke();
+    }
+}
+
+/** Draw colored circle using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [radius=1]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
 
 /** Draw colored line between two points
  *  @param {Vector2} posA
@@ -3948,6 +4001,9 @@ function getTileCollisionData(pos)
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
+	pos = pos.divide(tileSizeDefault);
+	size = size.divide(tileSizeDefault);
+
     const minX = max(pos.x - size.x/2|0, 0);
     const minY = max(pos.y - size.y/2|0, 0);
     const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
@@ -4861,7 +4917,8 @@ function glPreRender()
     // set up the shader
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
+    if (textureInfos[0])
+        glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
@@ -4959,7 +5016,7 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image)
+    if (image && image.width)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
 
     // use point filtering for pixelated rendering
@@ -5182,7 +5239,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[])
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
@@ -5381,19 +5438,32 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         })
     );
 
-    // draw splash screen
-    showSplashScreen && promises.push(new Promise(resolve => 
+    if (!imageSources.length)
     {
-        let t = 0;
-        console.log(`${engineName} Engine v${engineVersion}`);
-        updateSplash();
-        function updateSplash()
+        // no images to load
+        promises.push(new Promise(resolve => 
         {
-            clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash, 16);
-        }
-    }));
+            textureInfos[0] = new TextureInfo(new Image);
+            resolve();
+        }));
+    }
+
+    if (showSplashScreen)
+    {
+        // draw splash screen
+        promises.push(new Promise(resolve => 
+        {
+            let t = 0;
+            console.log(`${engineName} Engine v${engineVersion}`);
+            updateSplash();
+            function updateSplash()
+            {
+                clearInput();
+                drawEngineSplashScreen(t+=.01);
+                t>1 ? resolve() : setTimeout(updateSplash, 16);
+            }
+        }));
+    }
 
     // load all of the images
     Promise.all(promises).then(startEngine);

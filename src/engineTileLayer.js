@@ -59,6 +59,9 @@ function getTileCollisionData(pos)
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
+	pos = pos.divide(tileSizeDefault);
+	size = size.divide(tileSizeDefault);
+
     const minX = max(pos.x - size.x/2|0, 0);
     const minY = max(pos.y - size.y/2|0, 0);
     const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
